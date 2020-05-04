@@ -1,7 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 const morgan = require('morgan')
 const cors = require('cors')
 const app = express()
+const Person = require('./models/person')
 
 app.use(express.json())
 app.use(cors())
@@ -41,7 +43,9 @@ app.get('/', (req, res) => {
 
 // show entire phonebook
 app.get('/api/persons', (req, res) =>{
-  res.json(phonebook)
+  Person.find({}).then(people => {
+    res.json(people.map(person => person.toJSON()))
+  })
 })
 
 // phonebook info page
@@ -53,13 +57,9 @@ app.get('/info', (req, res) => {
 
 // show single person by id
 app.get('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
-  const person = phonebook.find(p => p.id === id)
-  if (person) {
-    res.json(person)
-  } else {
-    res.status(404).send('404 Error')
-  }
+  Person.findById(req.params.id).then(people => {
+    res.json(people.toJSON())
+  })
 })
 
 // delete single person by id
@@ -70,36 +70,36 @@ app.delete('/api/persons/:id', (req, res) =>{
 })
 
 // add single person
-
-const newId = () => {
-  let length = phonebook.length
-  return Math.max(Math.random() * (1000000000 - length) +1)
-}
 app.post('/api/persons', (req, res) => {
   const body = req.body
+  // if (!body.name) {
+  //   return res.status(400).json({
+  //     error: 'content missing'
+  //   })
+  // }
+  // let findName = phonebook.find(person => person.name == body.name)
+  // let findNumber = phonebook.find(person => person.number == body.number)
 
-  let findName = phonebook.find(person => person.name == body.name)
-  let findNumber = phonebook.find(person => person.number == body.number)
+  // if (!body.name || !body.number) {
+  //   return res.send('please enter a name and number').status(400)
+  // }
+  // if (findName || findNumber){
+  //   res.json({
+  //     error:'Must be a unique name & number'
+  //   })
+  // }
 
-  if (!body.name || !body.number) {
-    return res.send('please enter a name and number').status(400)
-  }
-  if (findName || findNumber){
-    res.json({
-      error:'Must be a unique name & number'
-    })
-  }
-
-  const person = {
+  const person = new Person ({
     name: body.name,
     number: body.number,
-    id: newId()
-  }
-  phonebook = phonebook.concat(person)
-  res.json(phonebook)
+  })
+  person.save().then(savedPerson => {
+    res.json(savedPerson.toJSON())
+    console.log(savedPerson.name)
+  })
 })
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen((PORT), () => {
   console.log(`server up on port ${PORT}`)
 })
