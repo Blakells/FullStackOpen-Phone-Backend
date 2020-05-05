@@ -12,33 +12,30 @@ app.use(express.static('build'))
 morgan.token('body', function (req) { return JSON.stringify(req.body)})
 app.use(morgan(':method :url :status :response-time :body'))
 
-// phonebook
-let phonebook = [
-  {
-    "name": "Arto Hellas",
-    "number": "040-123456",
-    "id": 1
-  },
-  {
-    "name": "Ada Lovelace",
-    "number": "39-44-5323523",
-    "id": 2
-  },
-  {
-    "name": "Dan Abramov",
-    "number": "12-43-234345",
-    "id": 3
-  },
-  {
-    "name": "Mary Poppendieck",
-    "number": "39-23-6423122",
-    "id": 4
+//error handler middleware
+const errorHandler = (error, req, res, next) => {
+  console.log(error.message)
+  if (error.name === 'CastError') {
+    return res.status(404).send({error: 'malformatted id'})
   }
-]
+  next(error)
+}
+app.use(errorHandler)
 
 // root api
 app.get('/', (req, res) => {
   res.send('Home')
+})
+
+//phonebook info
+app.get('/info', (req, res) => {
+  Person.count({})
+  .then(personsLength => {
+    res.send(`
+    <p>Phonebook has a total of ${person} contacts</p>
+    <p>${new Date()}</p>
+    `)
+  })
 })
 
 // show entire phonebook
@@ -63,31 +60,32 @@ app.get('/api/persons/:id', (req, res) => {
 })
 
 // delete single person by id
-app.delete('/api/persons/:id', (req, res) =>{
-  const id = Number(req.params.id)
-  phonebook = phonebook.filter(p => p.id !== id)
-  res.status(204).end()
+app.delete('/api/persons/:id', (req, res, next) => {
+  Person.findByIdAndRemove(req.params.id)
+  .then(ress => {
+    console.log('person deleted successfully')
+    res.status(204).end()
+  })
+  .catch(err => next(err))
+})
+
+//update current person
+app.put('/api/persons/:id', (req, res, next) => {
+  const body = req.body
+  const person = {
+    name: body.name,
+    number: body.number
+  }
+  Person.findByIdAndUpdate(req.params.id, person, {new : true})
+  .then(updatedPerson => {
+    res.json(updatedPerson.toJSON())
+  })
+  .catch(err => next(err))
 })
 
 // add single person
 app.post('/api/persons', (req, res) => {
   const body = req.body
-  // if (!body.name) {
-  //   return res.status(400).json({
-  //     error: 'content missing'
-  //   })
-  // }
-  // let findName = phonebook.find(person => person.name == body.name)
-  // let findNumber = phonebook.find(person => person.number == body.number)
-
-  // if (!body.name || !body.number) {
-  //   return res.send('please enter a name and number').status(400)
-  // }
-  // if (findName || findNumber){
-  //   res.json({
-  //     error:'Must be a unique name & number'
-  //   })
-  // }
 
   const person = new Person ({
     name: body.name,
