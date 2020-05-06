@@ -1,7 +1,9 @@
 const mongoose = require('mongoose')
 mongoose.set('useFindAndModify', false)
+mongoose.set('useCreateIndex', true)
 const url = process.env.MONGODB_URI
 console.log('connecting to...', url)
+const uniqueValidator = require('mongoose-unique-validator');
 
 //connect mongoose to the database/cluster
 mongoose.connect(url, {useNewUrlParser: true, useUnifiedTopology: true})
@@ -13,9 +15,19 @@ mongoose.connect(url, {useNewUrlParser: true, useUnifiedTopology: true})
 })
 //create your Schema
 const personSchema = new mongoose.Schema({
-    name: String,
-    number: String
+    name: {
+        type: String,
+        minlength: 2,
+        required: true,
+        unique: true
+    },
+    number: {
+        type: String,
+        minlength: 9,
+        required: true
+    }
 })
+personSchema.plugin(uniqueValidator)
 //format schema correctly
 personSchema.set('toJSON', {
     transform: (document, returnedObject) => {

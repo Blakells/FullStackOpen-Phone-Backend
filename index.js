@@ -12,16 +12,6 @@ app.use(express.static('build'))
 morgan.token('body', function (req) { return JSON.stringify(req.body)})
 app.use(morgan(':method :url :status :response-time :body'))
 
-//error handler middleware
-const errorHandler = (error, req, res, next) => {
-  console.log(error.message)
-  if (error.name === 'CastError') {
-    return res.status(404).send({error: 'malformatted id'})
-  }
-  next(error)
-}
-app.use(errorHandler)
-
 // root api
 app.get('/', (req, res) => {
   res.send('Home')
@@ -84,18 +74,33 @@ app.put('/api/persons/:id', (req, res, next) => {
 })
 
 // add single person
-app.post('/api/persons', (req, res) => {
+app.post('/api/persons', (req, res, next) => {
   const body = req.body
-
   const person = new Person ({
     name: body.name,
     number: body.number,
   })
   person.save().then(savedPerson => {
-    res.json(savedPerson.toJSON())
-    console.log(savedPerson.name)
+    return savedPerson.toJSON()
   })
+  .then(savedAndFormattedPerson => {
+    console.log(savedAndFormattedPerson)
+    res.json(savedAndFormattedPerson)
+  })
+  .catch(err => next(err))
 })
+
+//error handler middleware
+const errorHandler = (error, req, res, next) => {
+  console.log(error.message)
+  if (error.name === 'CastError') {
+    return res.status(404).send({error: 'malformatted id'})
+  } else if (error.name === 'ValidationError') {
+    return res.status(400).send({error: error.message})
+  }
+  next(error)
+}
+app.use(errorHandler)
 
 const PORT = process.env.PORT
 app.listen((PORT), () => {
