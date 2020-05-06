@@ -76,6 +76,7 @@ app.put('/api/persons/:id', (req, res, next) => {
 // add single person
 app.post('/api/persons', (req, res, next) => {
   const body = req.body
+  
   const person = new Person ({
     name: body.name,
     number: body.number,
